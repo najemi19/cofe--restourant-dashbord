@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة المالك — E‑Smart Market Pro AI</title>
+<style>
+  body{margin:0;font-family:system-ui,Segoe UI,Tahoma,Arial,sans-serif;background:#f6f8fc;color:#0b1220}
+  header{background:#0fb5a7;color:#fff;padding:12px;text-align:center;font-weight:bold;font-size:1.2rem;position:sticky;top:0}
+  .container{padding:12px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+  .kpi{background:#fff;border-radius:8px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);text-align:center}
+  .kpi .label{font-size:.9rem;color:#586179}
+  .kpi .value{font-size:1.2rem;font-weight:bold;margin-top:4px}
+  h3{margin:16px 0 8px}
+  .card{background:#fff;border-radius:8px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:12px}
+  .sale-item,.alert-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:.9rem}
+  .sale-item:last-child,.alert-item:last-child{border-bottom:none}
+  .time{color:#586179;font-size:.8rem}
+</style>
+</head>
+<body>
+
+<header>📊 لوحة تحكم المالك</header>
+
+<div class="container">
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi"><div class="label">💰 مبيعات اليوم</div><div class="value" id="kpiSales">0 MAD</div></div>
+    <div class="kpi"><div class="label">🛒 الطلبات</div><div class="value" id="kpiOrders">0</div></div>
+    <div class="kpi"><div class="label">📊 متوسط التذكرة</div><div class="value" id="kpiAvg">0 MAD</div></div>
+    <div class="kpi"><div class="label">⚠️ مواد منخفضة</div><div class="value" id="kpiLow">0</div></div>
+  </div>
+
+  <!-- Latest Sales -->
+  <h3>🕒 آخر المبيعات</h3>
+  <div class="card" id="salesList"></div>
+
+  <!-- Alerts -->
+  <h3>🔔 التنبيهات</h3>
+  <div class="card" id="alertsList"></div>
+
+</div>
+
+<script>
+  async function fetchOwnerData(){
+    const res = await fetch("/api/owner-data");
+    const data = await res.json();
+    document.getElementById("kpiSales").textContent = data.kpis.sales.toFixed(2) + " MAD";
+    document.getElementById("kpiOrders").textContent = data.kpis.orders;
+    document.getElementById("kpiAvg").textContent = data.kpis.avg.toFixed(2) + " MAD";
+    document.getElementById("kpiLow").textContent = data.kpis.low;
+
+    const salesList = document.getElementById("salesList");
+    salesList.innerHTML = "";
+    data.sales.forEach(s=>{
+      const div = document.createElement("div");
+      div.className = "sale-item";
+      div.innerHTML = `<span>${new Date(s.time).toLocaleTimeString()} - ${s.total.toFixed(2)} MAD</span><span class="time">${s.user||""}</span>`;
+      salesList.appendChild(div);
+    });
+
+    const alertsList = document.getElementById("alertsList");
+    alertsList.innerHTML = "";
+    if(data.alerts.length){
+      data.alerts.forEach(msg=>{
+        const div = document.createElement("div");
+        div.className = "alert-item";
+        div.innerHTML = `<span>${msg}</span>`;
+        alertsList.appendChild(div);
+      });
+    } else {
+      const div = document.createElement("div");
+      div.className = "alert-item";
+      div.innerHTML = `<span>✅ لا توجد مواد منخفضة</span>`;
+      alertsList.appendChild(div);
+    }
+  }
+
+  // جلب أولي
+  fetchOwnerData();
+
+  // WebSocket للتحديث اللحظي
+  const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${wsProtocol}://${location.host}`);
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === "update") fetchOwnerData();
+  };
+
+  // طلب إذن إشعارات Push
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").then(reg => {
+      return Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: "<VAPID_PUBLIC_KEY_BASE64>"
+          }).then(sub => {
+            fetch("/api
+              if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").then(reg => {
+      return Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: "<VAPID_PUBLIC_KEY_BASE64>"
+          }).then(sub => {
+            // إرسال الاشتراك للخادم
+            fetch("/api/subscribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(sub)
+            });
+          });
+        }
+      });
+    });
+  }
+</script>
+
+</body>
+</html>

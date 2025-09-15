@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة مقهى ذكية — E‑Smart Market Pro AI</title>
+<link rel="icon" href="logo.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#0f1115; --surface:#171a21; --muted-surface:#11151d;
+    --text:#e8ecf3; --muted:#9aa3b2; --brand:#2dd4bf; --accent:#f97316;
+    --border:#232733; --radius:10px; --gap:14px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{--bg:#f6f8fc; --surface:#fff; --muted-surface:#f3f6fb; --text:#0b1220; --muted:#586179; --brand:#0fb5a7; --accent:#e86a11; --border:#e3e8f0;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Tahoma,Arial,sans-serif}
+  header{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:800}
+  .brand img{width:28px;height:28px;border-radius:6px}
+  .badge{display:inline-block;padding:4px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:.8rem}
+  .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--brand);color:#062b27;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn.danger{background:#d24545;color:#fff}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .page{display:grid;grid-template-columns:220px 1fr;gap:16px;max-width:1280px;margin:0 auto;padding:16px}
+  @media(max-width:980px){.page{grid-template-columns:1fr}}
+  aside.sidebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;height:fit-content;position:sticky;top:68px}
+  .nav-vertical{display:flex;flex-direction:column;gap:8px}
+  .nav-btn{background:transparent;border:1px solid var(--border);padding:10px;border-radius:8px;text-align:right;cursor:pointer;color:var(--text)}
+  .nav-btn.active{background:var(--brand);color:#062b27;border-color:transparent}
+  main.content{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;min-height:60vh}
+  .panel{display:none}.panel.active{display:block}
+  .section-title{margin:0 0 8px;font-size:1.1rem;font-weight:800}
+  .muted{color:var(--muted);font-size:.92rem}
+  .hr{height:1px;background:var(--border);margin:12px 0}
+  .grid{display:grid;gap:var(--gap)} .grid.cols-2{grid-template-columns:1fr 1fr} .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  .search-box{display:flex;gap:8px;margin-bottom:10px}
+  .input, select, input[type="number"], input[type="text"], input[type="search"], input[type="password"], input[type="file"]{background:var(--muted-surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px}
+  .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--gap)}
+  .product-card{background:var(--muted-surface);padding:10px;border-radius:var(--radius);border:1px solid var(--border)}
+  .product-name{font-weight:800;margin-bottom:4px}
+  .product-meta{color:var(--muted);font-size:.85rem;margin-bottom:8px}
+  .cart{background:var(--muted-surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
+  .cart-list{display:grid;gap:8px;max-height:220px;overflow:auto;margin-bottom:8px}
+  .cart-item{display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.08);padding:8px;border-radius:8px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+  .kpi{background:var(--muted-surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+  .kpi .v{font-size:1.1rem;font-weight:800;margin-top:4px}
+  table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  th,td{padding:10px;border-bottom:1px solid var(--border);text-align:right}
+  tr:nth-child(even){background:rgba(255,255,255,.02)}
+  canvas{background:var(--muted-surface);border:1px solid var(--border);border-radius:10px;padding:8px}
+  footer{text-align:center;padding:12px;font-size:.85rem;color:var(--muted);border-top:1px solid var(--border);margin-top:18px}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;min-width:300px;max-width:92vw}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img src="logo.png" alt="Logo">
+    <span id="appName">مقهى الرفيق</span>
+    <span id="roleBadge" class="badge"></span>
+  </div>
+  <div class="header-actions">
+    <select id="langSwitch" class="btn secondary" title="Language">
+      <option value="ar">AR</option><option value="fr">FR</option><option value="en">EN</option>
+    </select>
+    <button id="exportBtn" class="btn secondary" data-i18n="export">تصدير</button>
+    <label class="btn secondary" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+      <span data-i18n="import">استيراد</span>
+      <input id="importInput" type="file" accept="application/json" style="display:none">
+    </label>
+    <button id="printBtn" class="btn secondary" data-i18n="print">طباعة</button>
+    <button id="logoutBtn" class="btn danger" data-i18n="logout">خروج</button>
+  </div>
+</header>
+
+<div class="page">
+  <aside class="sidebar">
+    <div class="nav-vertical" id="navSections">
+      <button class="nav-btn active" data-target="sales" data-i18n="sales">المبيعات</button>
+      <button class="nav-btn" data-target="reports" data-i18n="reports">التقارير</button>
+      <button class="nav-btn" data-target="menu" data-i18n="menu">القائمة والأسعار</button>
+      <button class="nav-btn" data-target="stock" data-i18n="stock">المخزون</button>
+      <button class="nav-btn" data-target="staff" data-i18n="staff">الموظفون</button>
+      <button class="nav-btn" data-target="audit" data-i18n="audit">سجل التدقيق</button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <!-- SALES -->
+    <section id="panel-sales" class="panel active">
+      <h3 class="section-title" data-i18n="sales">المبيعات</h3>
+      <div class="muted" data-i18n="hint_sales">المنتجات، البحث، السلة، الدفع، المؤشرات</div>
+      <div class="hr"></div>
+      <div class="search-box">
+        <input id="searchInput" class="input" type="search" data-i18n-placeholder="searchPlaceholder" placeholder="ابحث عن منتج...">
+        <button id="clearSearch" class="btn secondary" data-i18n="clear">مسح</button>
+        <button id="sendDailyReport" class="btn secondary">📤 تقرير اليوم</button>
+      </div>
+      <div id="productsGrid" class="products-grid"></div>
+      <div class="hr"></div>
+      <div class="grid cols-2">
+        <div class="cart">
+          <h4 data-i18n="cart">السلة</h4>
+          <div id="cartList" class="cart-list"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+            <div data-i18n="total">المجموع</div>
+            <div id="cartTotal">0.00 MAD</div>
+          </div>
+          <div class="actions" style="margin-top:8px">
+            <button id="cashPay" class="btn" data-i18n="cash">دفع نقدًا</button>
+            <button id="qrPay" class="btn secondary" data-i18n="qr">QR</button>
+            <button id="clearCart" class="btn danger" data-i18n="empty">تفريغ</button>
+          </div>
+        </div>
+        <div>
+          <h4 data-i18n="kpis">المؤشرات</h4>
+          <div class="kpis">
+            <div class="kpi"><div data-i18n="salesToday">مبيعات اليوم</div><div class="v" id="kpiToday">0.00 MAD</div></div>
+            <div class="kpi"><div data-i18n="orders">الطلبات</div><div class="v" id="kpiOrders">0</div></div>
+            <div class="kpi"><div data-i18n="avg">متوسط التذكرة</div><div class="v" id="kpiAvg">0.00 MAD</div></div>
+            <div class="kpi"><div data-i18n="lowItems">مواد منخفضة</div><div class="v" id="kpiLow">0</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="panel-reports" class="panel">
+      <h3 class="section-title" data-i18n="reports">التقارير</h3>
+      <div class="muted" data-i18n="hint_reports">تحليلات يومية/أسبوعية/شهرية</div>
+      <div class="hr"></div>
+      <canvas id="salesChart" height="120"></canvas>
+      <div style="height:10px"></div>
+      <canvas id="weeklyChart" height="120"></canvas>
+      <div style="height:10px"></div>
+      <canvas id="monthlyChart" height="120"></canvas>
+    </section>
+
+    <!-- MENU -->
+    <section id="panel-menu" class="panel">
+      <h3 class="section-title" data-i18n="menu">القائمة والأسعار</h3>
+      <div class="muted" data-i18n="hint_menu">إضافة/تعديل/حذف المنتجات + وصفات الاستهلاك</div>
+      <div class="hr"></div>
+      <form id="productForm" class="grid cols-3" style="align-items:end">
+        <div><label data-i18n="prodName">اسم المنتج</label><input id="prodName" class="input" required></div>
+        <div><label data-i18n="prodPrice">السعر (MAD)</label><input id="prodPrice" class="input" type="number" step="0.01" min="0" required></div>
+        <div><label data-i18n="prodCat">الفئة</label><input id="prodCat" class="input" placeholder="ساخن/عصائر..."></div>
+        <div class="actions"><button type="submit" class="btn" data-i18n="addProduct">إضافة</button><button id="resetForm" type="button" class="btn secondary" data-i18n="reset">تفريغ</button></div>
+      </form>
+      <div style="margin-top:8px">
+        <label class="btn secondary">
+          استيراد وصفات CSV
+          <input type="file" id="importRecCSV" accept=".csv" style="display:none">
+        </label>
+      </div>
+      <div class="hr"></div>
+      <table id="menuTable">
+        <thead><tr>
+          <th data-i18n="prodName">اسم المنتج</th><th data-i18n="prodPrice">السعر</th><th data-i18n="prodCat">الفئة</th>
+          <th data-i18n="recipe">الوصفة</th><th data-i18n="actions">إجراءات</th>
+        </tr></thead>
+        <tbody id="menuBody"></tbody>
+      </table>
+    </section>
+
+    <!-- STOCK -->
+    <section id="panel-stock" class="panel">
+      <h3 class="section-title" data-i18n="stock">المخزون</h3>
+      <div class="muted" data-i18n="hint_stock">مواد خام بوحدات قياس + تنبيهات انخفاض</div>
+      <div class="hr"></div>
+      <form id="ingForm" class="grid cols-3" style="align-items:end">
+        <div><label data-i18n="ingName">اسم المادة</label><input id="ingName" class="input" required></div>
+        <div><label data-i18n="unit">الوحدة</label><input id="ingUnit" class="input" placeholder="غ/مل/حبة..."></div>
+        <div><label data-i18n="stockQty">الكمية</label><input id="ingQty" class="input" type="number" step="0.01" min="0" value="0"></div>
+        <div><label data-i18n="lowThreshold">حد التنبيه</label><input id="ingLow" class="input" type="number" step="0.01" min="0" value="0"></div>
+        <div class="actions"><button type="submit" class="btn" data-i18n="add">إضافة</button></div>
+      </form>
+      <div style="margin-top:8px">
+        <label class="btn secondary">
+          استيراد مواد CSV
+          <input type="file" id="importIngCSV" accept=".csv" style="display:none">
+        </label>
+      </div>
+      <div class="hr"></div>
+      <table id="ingTable">
+        <thead><tr>
+          <th data-i18n="ingName">اسم المادة</th><th data-i18n="unit">الوحدة</th><th data-i18n="stockQty">الكمية</th><th data-i18n="lowThreshold">حد التنبيه</th><th data-i18n="actions">إجراءات</th>
+        </tr></thead>
+        <tbody id="ingBody"></tbody>
+      </table>
+    </section>
+
+    <!-- STAFF -->
+    <section id="panel-staff" class="panel">
+      <h3 class="section-title" data-i18n="staff">الموظفون</h3>
+      <div class="muted" data-i18n="hint_staff">المستخدمون والأدوار</div>
+      <div class="hr"></div>
+      <form id="staffForm" class="grid cols-3" style="align-items:end">
+        <div><label data-i18n="staffName">الاسم</label><input id="staffName" class="input" required></div>
+        <div><label>اسم المستخدم</label><input id="staffUsername" class="input" placeholder="ex: ahmed" required></div>
+        <div><label>كلمة المرور</label><input id="staffPassword" class="input" type="password" placeholder="••••" required></div>
+        <div><label data-i18n="staffRole">الدور</label>
+          <select id="staffRole" class="input">
+            <option value="cashier" data-i18n="cashier">كاشير</option>
+            <option value="manager" data-i18n="manager">مدير</option>
+            <option value="owner" data-i18n="owner">مالك</option>
+          </select>
+        </div>
+        <div class="actions"><button type="submit" class="btn" data-i18n="add">إضافة</button></div>
+      </form>
+      <div class="hr"></div>
+      <table id="staffTable"><thead><tr><th data-i18n="staffName">الاسم</th><th>اسم المستخدم</th><th data-i18n="staffRole">الدور</th><th data-i18n="actions">إجراءات</th></tr></thead><tbody id="staffBody"></tbody></table>
+    </section>
+
+    <!-- AUDIT LOG -->
+    <section id="panel-audit" class="panel">
+      <h3 class="section-title" data-i18n="audit">سجل التدقيق</h3>
+      <div class="muted" data-i18n="hint_audit">تسجّل كل العمليات حسب المستخدم والوقت</div>
+      <div class="hr"></div>
+      <table id="auditTable"><thead><tr><th data-i18n="time">الوقت</th><th data-i18n="user">المستخدم</th><th data-i18n="role">الدور</th><th data-i18n="action">الإجراء</th><th data-i18n="details">التفاصيل</th></tr></thead><tbody id="auditBody"></tbody></table>
+    </section>
+  </main>
+</div>
+
+<!-- Login -->
+<div id="loginOverlay" class="overlay" style="display:none">
+  <div class="card">
+    <h3 style="margin-top:0" data-i18n="loginTitle">تسجيل الدخول</h3>
+    <div class="grid">
+      <div><label data-i18n="username">اسم المستخدم</label><input id="loginUser" class="input" value="admin"></div>
+      <div><label data-i18n="password">كلمة المرور</label><input id="loginPass" class="input" type="password" value="admin"></div>
+      <button id="loginBtn" class="btn" data-i18n="login">دخول</button>
+      <div class="muted" style="margin-top:6px">admin/admin</div>
+    </div>
+  </div>
+</div>
+
+<footer>© جميع الحقوق محفوظة لـ Tarek Najemi — E‑Smart Market Pro AI</footer>
+
+<script>
+  // Storage and audit
+  const STORAGE_KEY = "esm_cafe_final_v2";
+  const load = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch { return null; } };
+  const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const log = (action, details="") => { state.audit.push({time:new Date().toISOString(), user:auth.user?.username||"-", role:auth.user?.role||"-", action, details}); save(); renderAudit(); };
+
+  // i18n
+  let lang = localStorage.getItem("ui_lang") || "ar";
+  const dict = {
+    ar:{sales:"المبيعات",reports:"التقارير",menu:"القائمة والأسعار",stock:"المخزون",staff:"الموظفون",audit:"سجل التدقيق",
+        hint_sales:"المنتجات، البحث، السلة، الدفع، المؤشرات",hint_reports:"تحليلات يومية/أسبوعية/شهرية",hint_menu:"إضافة/تعديل/حذف المنتجات + وصفات الاستهلاك",hint_stock:"مواد خام بوحدات قياس + تنبيهات انخفاض",hint_staff:"المستخدمون والأدوار",hint_audit:"تسجّل كل العمليات حسب المستخدم والوقت",
+        searchPlaceholder:"ابحث عن منتج...",clear:"مسح",cart:"السلة",total:"المجموع",cash:"دفع نقدًا",qr:"QR",empty:"تفريغ",
+        kpis:"المؤشرات",salesToday:"مبيعات اليوم",orders:"الطلبات",avg:"متوسط التذكرة",lowItems:"مواد منخفضة",
+        export:"تصدير",import:"استيراد",print:"طباعة",logout:"خروج",
+        prodName:"اسم المنتج",prodPrice:"السعر (MAD)",prodCat:"الفئة",recipe:"الوصفة",actions:"إجراءات",
+        addProduct:"إضافة",reset:"تفريغ",update:"تحديث",delete:"حذف",edit:"تعديل",add:"إضافة",
+        ingName:"اسم المادة",unit:"الوحدة",stockQty:"الكمية",lowThreshold:"حد التنبيه",
+        staffName:"الاسم",staffRole:"الدور",cashier:"كاشير",manager:"مدير",owner:"مالك",
+        paidCash:"تم الدفع نقدًا",invalidFile:"ملف غير صالح",imported:"تم الاستيراد",added:"تمت الإضافة",updated:"تم التحديث",deleted:"تم الحذف",
+        outOfStock:"المخزون غير كافٍ للوصفة",qty:"الكمية",save:"حفظ",cancel:"إلغاء",
+        chartToday:"مبيعات اليوم",chartWeek:"مبيعات الأسبوع",chartMonth:"مبيعات الشهر",
+        loginTitle:"تسجيل الدخول",username:"اسم المستخدم",password:"كلمة المرور",login:"دخول",
+        time:"الوقت",user:"المستخدم",role:"الدور",action:"الإجراء",details:"التفاصيل"},
+    fr:{sales:"Ventes",reports:"Rapports",menu:"Menu & Prix",stock:"Stock",staff:"Équipe",audit:"Audit",
+        hint_sales:"Produits, recherche, panier, paiement, KPIs",hint_reports:"Analytique jour/semaine/mois",hint_menu:"Ajouter/Modifier/Supprimer + Recettes",hint_stock:"Ingrédients + seuils d'alerte",hint_staff:"Utilisateurs & rôles",hint_audit:"Toutes les actions par utilisateur",
+        searchPlaceholder:"Rechercher un produit...",clear:"Effacer",cart:"Panier",total:"Total",cash:"Espèces",qr:"QR",empty:"Vider",
+        kpis:"Indicateurs",salesToday:"Ventes du jour",orders:"Commandes",avg:"Ticket moyen",lowItems:"Articles faibles",
+        export:"Exporter",import:"Importer",print:"Imprimer",logout:"Déconnexion",
+        prodName:"Nom du produit",prodPrice:"Prix (MAD)",prodCat:"Catégorie",recipe:"Recette",actions:"Actions",
+        addProduct:"Ajouter",reset:"Réinitialiser",update:"Mettre à jour",delete:"Supprimer",edit:"Éditer",add:"Ajouter",
+        ingName:"Ingrédient",unit:"Unité",stockQty:"Stock",lowThreshold:"Seuil bas",
+        staffName:"Nom",staffRole:"Rôle",cashier:"Caissier",manager:"Manager",owner:"Propriétaire",
+        paidCash:"Payé en espèces",invalidFile:"Fichier invalide",imported:"Importé",added:"Ajouté",updated:"Mis à jour",deleted:"Supprimé",
+        outOfStock:"Stock insuffisant pour la recette",qty:"Qté",save:"Enregistrer",cancel:"Annuler",
+        chartToday:"Ventes du jour",chartWeek:"Ventes hebdo",chartMonth:"Ventes mensuelles",
+        loginTitle:"Connexion",username:"Utilisateur",password:"Mot de passe",login:"Entrer",
+        time:"Date",user:"Utilisateur",role:"Rôle",action:"Action",details:"Détails"},
+    en:{sales:"Sales",reports:"Reports",menu:"Menu & Pricing",stock:"Inventory",staff:"Staff",audit:"Audit Log",
+        hint_sales:"Products, search, cart, payment, KPIs",hint_reports:"Daily/weekly/monthly analytics",hint_menu:"Add/Edit/Delete + Recipes",hint_stock:"Ingredients with units + low alerts",hint_staff:"Users & roles",hint_audit:"All actions by user/time",
+        searchPlaceholder:"Search a product...",clear:"Clear",cart:"Cart",total:"Total",cash:"Cash",qr:"QR",empty:"Clear",
+        kpis:"KPIs",salesToday:"Sales today",orders:"Orders",avg:"Avg ticket",lowItems:"Low items",
+        export:"Export",import:"Import",print:"Print",logout:"Logout",
+        prodName:"Product name",prodPrice:"Price (MAD)",prodCat:"Category",recipe:"Recipe",actions:"Actions",
+        addProduct:"Add",reset:"Reset",update:"Update",delete:"Delete",edit:"Edit",add:"Add",
+        ingName:"Ingredient",unit:"Unit",stockQty:"Qty",lowThreshold:"Low threshold",
+        staffName:"Name",staffRole:"Role",cashier:"Cashier",manager:"Manager",owner:"Owner",
+        paidCash:"Paid cash",invalidFile:"Invalid file",imported:"Imported",added:"Added",updated:"Updated",deleted:"Deleted",
+        outOfStock:"Insufficient stock for recipe",qty:"Qty",save:"Save",cancel:"Cancel",
+        chartToday:"Sales today",chartWeek:"Weekly sales",chartMonth:"Monthly sales",
+        loginTitle:"Sign in",username:"Username",password:"Password",login:"Login",
+        time:"Time",user:"User",role:"Role",action:"Action",details:"Details"}
+  };
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const t = k => (dict[lang] && dict[lang][k]) || k;
+  function applyI18n(){ $$("[data-i18n]").forEach(el=> el.textContent=t(el.getAttribute("data-i18n"))); $$("[data-i18n-placeholder]").forEach(el=> el.placeholder=t(el.getAttribute("data-i18n-placeholder"))); $("#langSwitch").value=lang; updateChartsLabels(); }
+
+  // Auth and roles
+  const auth = { user:null };
+  const defaultUsers = [
+    {id:1, username:"admin", password:"admin", role:"owner", name:"المالك"},
+    {id:2, username:"manager", password:"manager", role:"manager", name:"المدير"},
+    {id:3, username:"cashier", password:"cashier", role:"cashier", name:"الكاشير"}
+  ];
+
+  // Defaults (product names remain as stored, e.g., Arabic)
+  const defaultProducts = [
+    { id:1, name:"إسبريسو", price:12, cat:"ساخن" },
+    { id:2, name:"نص نص", price:10, cat:"ساخن" },
+    { id:3, name:"قهوة بالحليب", price:11, cat:"ساخن" },
+    { id:4, name:"شاي بالنعناع", price:8, cat:"ساخن" },
+    { id:5, name:"عصير برتقال", price:14, cat:"عصائر" }
+  ];
+  const defaultIngredients = {
+    1:{name:"حبوب قهوة", unit:"غ", qty:1000, low:200},
+    2:{name:"حليب", unit:"مل", qty:5000, low:1000},
+    3:{name:"ماء", unit:"مل", qty:10000, low:2000},
+    4:{name:"سكر", unit:"غ", qty:2000, low:300},
+    5:{name:"نعناع", unit:"غ", qty:200, low:30},
+    6:{name:"برتقال", unit:"حبة", qty:50, low:10}
+  };
+  const defaultRecipes = {
+    1:[{ingId:1,qty:9},{ingId:3,qty:30}],
+    2:[{ingId:1,qty:7},{ingId:2,qty:80},{ingId:3,qty:20}],
+    3:[{ingId:1,qty:7},{ingId:2,qty:120}],
+    4:[{ingId:3,qty:200},{ingId:5,qty:3},{ingId:4,qty:8}],
+    5:[{ingId:6,qty:3}]
+  };
+
+  // State
+  let state = load() || {
+    lang,
+    users: defaultUsers.slice(),
+    products: defaultProducts.slice(),
+    ingredients: JSON.parse(JSON.stringify(defaultIngredients)),
+    recipes: JSON.parse(JSON.stringify(defaultRecipes)),
+    staff: defaultUsers.map(u=>({id:u.id,name:u.name||u.username,role:u.role,username:u.username})),
+    cart:[], sales:[], audit:[]
+  };
+  let editingProductId = null;
+
+  // WhatsApp settings (replace with real numbers)
+  const whatsappNumbers = { owner: "2126XXXXXXXX", manager: "2126YYYYYYYY" };
+  async function sendWhatsAppMessage(to, message){
+    try{
+      await fetch("/notify", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ to, body: message }) });
+      log("notify.send", `to=${to}`);
+    }catch(e){ console.error(e); }
+  }
+  function checkLowStockAndNotify(){
+    const lows = Object.values(state.ingredients).filter(x=> x.qty <= x.low);
+    if(!lows.length) return;
+    const msg = `🚨 ${t('lowItems')}: \n` + lows.map(i=>`- ${i.name}: ${i.qty}${i.unit}`).join("\n");
+    sendWhatsAppMessage(whatsappNumbers.owner, msg);
+    sendWhatsAppMessage(whatsappNumbers.manager, msg);
+    log("notify.lowstock", `${lows.length} items`);
+  }
+  function sendDailySalesReport(){
+    const today = new Date().toDateString();
+    const todaySales = state.sales.filter(s=> new Date(s.time).toDateString()===today);
+    const total = todaySales.reduce((sum,s)=>sum+s.total,0);
+    const msg = `📊 ${t('chartToday')}\n${t('orders')}: ${todaySales.length}\n${t('total')}: ${total.toFixed(2)} MAD`;
+    sendWhatsAppMessage(whatsappNumbers.owner, msg);
+    sendWhatsAppMessage(whatsappNumbers.manager, msg);
+    log("notify.salesreport", `orders=${todaySales.length}, total=${total}`);
+  }
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    $("#langSwitch").addEventListener("change", e=>{ lang=e.target.value; localStorage.setItem("ui_lang", lang); applyI18n(); renderAll(); });
+    applyI18n();
+
+    $("#exportBtn").addEventListener("click", onExport);
+    $("#importInput").addEventListener("change", onImportJSON);
+    $("#printBtn").addEventListener("click", ()=>window.print());
+    $("#logoutBtn").addEventListener("click", ()=>{ auth.user=null; sessionStorage.removeItem("esm_user"); showLogin(); });
+
+    $$("#navSections .nav-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        if(!canAccess(btn.dataset.target)) return alert("ليس لديك صلاحية الوصول");
+        $$("#navSections .nav-btn").forEach(b=>b.classList.remove("active"));
+        $$(".panel").forEach(p=>p.classList.remove("active"));
+        btn.classList.add("active");
+        $(`#panel-${btn.dataset.target}`).classList.add("active");
+        if(btn.dataset.target==="reports") updateCharts();
+      });
+    });
+
+    $("#searchInput").addEventListener("input", e=> renderProducts(e.target.value.trim()));
+    $("#clearSearch").addEventListener("click", ()=>{ $("#searchInput").value=""; renderProducts(); });
+    $("#sendDailyReport").addEventListener("click", sendDailySalesReport);
+    $("#cashPay").addEventListener("click", payCash);
+    $("#qrPay").addEventListener("click", ()=> alert("ميزة الدفع عبر QR قريبًا"));
+    $("#clearCart").addEventListener("click", ()=>{ state.cart=[]; save(); renderCart(); updateKPIs(); updateCharts(); });
+
+    $("#productForm").addEventListener("submit", onSaveProduct);
+    $("#resetForm").addEventListener("click", resetProductForm);
+    $("#importRecCSV").addEventListener("change", onImportRecipesCSV);
+
+    $("#ingForm").addEventListener("submit", onAddIngredient);
+    $("#importIngCSV").addEventListener("change", onImportIngredientsCSV);
+
+    $("#staffForm").addEventListener("submit", onAddStaff);
+
+    const savedUser = sessionStorage.getItem("esm_user");
+    if(savedUser){ auth.user = JSON.parse(savedUser); afterLogin(); } else { showLogin(); }
+  });
+
+  function renderAll(){ renderProducts(); renderCart(); refreshMenuTable(); refreshIngredientsTable(); refreshStaffTable(); renderAudit(); updateKPIs(); updateChartsLabels(); updateCharts(); }
+
+  // Permissions
+  function canAccess(panel){
+    const role = auth.user?.role;
+    if(role==="owner") return true;
+    if(role==="manager") return ["sales","reports","menu","stock","staff"].includes(panel);
+    if(role==="cashier") return ["sales","reports"].includes(panel);
+    return false;
+  }
+  function applyRoleVisibility(){
+    const role = auth.user?.role;
+    $("#roleBadge").textContent = role ? t(role) : "";
+    $$("#navSections .nav-btn").forEach(btn=> btn.style.display = canAccess(btn.dataset.target) ? "block" : "none");
+    if(role==="cashier"){ $("#productForm").style.display="none"; $("#ingForm").style.display="none"; $("#staffForm").style.display="none"; }
+    else if(role==="manager"){ $("#staffForm").style.display="none"; }
+  }
+
+  // Login
+  function showLogin(){ $("#loginOverlay").style.display="flex"; }
+  function hideLogin(){ $("#loginOverlay").style.display="none"; }
+  $("#loginBtn")?.addEventListener("click", ()=>{
+    const u=$("#loginUser").value.trim(), p=$("#loginPass").value;
+    const found = state.users.find(x=>x.username===u && x.password===p);
+    if(found){
+      auth.user = {id:found.id, username:found.username, role:found.role, name:found.name||found.username};
+      sessionStorage.setItem("esm_user", JSON.stringify(auth.user));
+      log("login", auth.user.username);
+      afterLogin();
+    }else alert("بيانات غير صحيحة");
+  });
+  function afterLogin(){ hideLogin(); applyRoleVisibility(); renderAll(); ensureCharts(); }
+
+  // Products/Sales
+  function renderProducts(q=""){
+    const grid = $("#productsGrid");
+    const data = state.products.filter(p=> (p.name.includes(q) || (p.cat||"").includes(q)));
+    grid.innerHTML = data.map(p=>`
+      <div class="product-card">
+        <div class="product-name">${p.name}</div>
+        <div class="product-meta">${p.cat||""} • ${p.price} MAD</div>
+        <button class="btn" onclick="addToCart(${p.id})">+ ${t('add')}</button>
+        <div class="muted" style="margin-top:6px">${recipePreview(p.id)}</div>
+      </div>
+    `).join("");
+  }
+  function recipePreview(pid){
+    const list = state.recipes[pid]||[];
+    if(!list.length) return "";
+    return list.map(r=>{ const ing = state.ingredients[r.ingId]; if(!ing) return ""; return `${ing.name} ${r.qty}${ing.unit}`; }).filter(Boolean).join(" • ");
+  }
+  window.addToCart = function(id){
+    const p = state.products.find(x=>x.id===id); if(!p) return;
+    const ex = state.cart.find(x=>x.id===id); if(ex) ex.qty+=1; else state.cart.push({id:p.id,name:p.name,price:p.price,qty:1});
+    save(); renderCart(); updateKPIs();
+  }
+  window.removeFromCart = function(id){
+    state.cart = state.cart.filter(x=>x.id!==id);
+    save(); renderCart(); updateKPIs();
+  }
+  function renderCart(){
+    const list = $("#cartList");
+    list.innerHTML = state.cart.map(i=>`
+      <div class="cart-item">
+        <div>${i.name} × ${i.qty}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div>${(i.price*i.qty).toFixed(2)} MAD</div>
+          <button class="btn danger" onclick="removeFromCart(${i.id})">×</button>
+        </div>
+      </div>
+    `).join("");
+    const total = state.cart.reduce((s,i)=> s + i.price*i.qty, 0);
+    $("#cartTotal").textContent = `${total.toFixed(2)} MAD`;
+  }
+
+  // Pay with recipe-based stock control
+  function payCash(){
+    if(!state.cart.length) return;
+    const need = {};
+    for(const line of state.cart){
+      const rec = state.recipes[line.id]||[];
+      for(const r of rec){ need[r.ingId] = (need[r.ingId]||0) + r.qty*line.qty; }
+    }
+    for(const ingId of Object.keys(need)){
+      const ing = state.ingredients[ingId];
+      if(!ing || ing.qty < need[ingId]){ alert(t('outOfStock')); return; }
+    }
+    for(const ingId of Object.keys(need)){ state.ingredients[ingId].qty -= need[ingId]; }
+    const total = state.cart.reduce((s,i)=> s + i.price*i.qty, 0);
+    state.sales.push({ time:new Date().toISOString(), total, user:auth.user?.username||"-" });
+    log("sale", `total=${total.toFixed(2)}; items=${state.cart.length}`);
+    state.cart = [];
+    save(); renderCart(); refreshIngredientsTable(); updateKPIs(); updateCharts();
+    checkLowStockAndNotify();
+    alert(t('paidCash'));
+  }
+
+  // KPIs
+  function updateKPIs(){
+    const todayStr = new Date().toDateString();
+    const todaySales = state.sales.filter(s=> new Date(s.time).toDateString()===todayStr).reduce((s,x)=>s+x.total,0);
+    const orders = state.sales.length;
+    const avg = orders ? state.sales.reduce((s,x)=>s+x.total,0)/orders : 0;
+    $("#kpiToday").textContent = `${todaySales.toFixed(2)} MAD`;
+    $("#kpiOrders").textContent = orders;
+    $("#kpiAvg").textContent = `${avg.toFixed(2)} MAD`;
+    const low = Object.values(state.ingredients).filter(x=> x.qty<=x.low).length;
+    $("#kpiLow").textContent = low;
+  }
+
+  // Export/Import JSON
+  function onExport(){
+    const blob = new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+    const url = URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download=`cafe_state_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url);
+  }
+  function onImportJSON(e){
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload = ev=>{ try{
+      const obj=JSON.parse(ev.target.result);
+      state = {...state, ...obj}; save(); renderAll(); alert(t('imported'));
+    }catch{ alert(t('invalidFile')); } };
+    r.readAsText(f);
+  }
+
+  // Menu CRUD + Recipe editor
+  function resetProductForm(){ editingProductId=null; $("#productForm").reset(); $("[data-i18n='addProduct']").textContent=t('addProduct'); }
+  function onSaveProduct(e){
+    e.preventDefault();
+    if(!canAccess('menu')) return alert("لا صلاحية");
+    const name=$("#prodName").value.trim(); const price=parseFloat($("#prodPrice").value); const cat=$("#prodCat").value.trim();
+    if(!name || isNaN(price)) return;
+    if(editingProductId){
+      const p=state.products.find(x=>x.id===editingProductId); if(p){p.name=name;p.price=price;p.cat=cat; log("product.update", p.name)}
+    }else{
+      const id=(state.products.reduce((m,x)=>Math.max(m,x.id),0)||0)+1;
+      state.products.push({id,name,price,cat}); state.recipes[id]=state.recipes[id]||[]; log("product.add", name);
+    }
+    save(); resetProductForm(); refreshMenuTable(); renderProducts();
+  }
+  function refreshMenuTable(){
+    const body=$("#menuBody");
+    body.innerHTML = state.products.map(p=>`
+      <tr>
+        <td>${p.name}</td><td>${p.price} MAD</td><td>${p.cat||""}</td>
+        <td><button class="btn secondary" onclick="editRecipe(${p.id})">${t('edit')}</button></td>
+        <td class="actions">
+          <button class="btn secondary" onclick="editProduct(${p.id})">${t('edit')}</button>
+          <button class="btn danger" onclick="deleteProduct(${p.id})">${t('delete')}</button>
+        </td>
+      </tr>`).join("");
+  }
+  window.editProduct = function(id){
+    if(!canAccess('menu')) return alert("لا صلاحية");
+    const p=state.products.find(x=>x.id===id); if(!p) return;
+    editingProductId=id; $("#prodName").value=p.name; $("#prodPrice").value=p.price; $("#prodCat").value=p.cat||"";
+    $("[data-i18n='addProduct']").textContent=t('update');
+    $$("#navSections .nav-btn").find(b=>b.dataset.target==='menu').click();
+  }
+  window.deleteProduct = function(id){
+    if(!canAccess('menu')) return alert("لا صلاحية");
+    state.cart = state.cart.filter(x=>x.id!==id);
+    state.products = state.products.filter(x=>x.id!==id);
+    delete state.recipes[id];
+    save(); refreshMenuTable(); renderProducts(); renderCart(); updateKPIs(); log("product.delete", `id=${id}`); alert(t('deleted'));
+  }
+  window.editRecipe = function(pid){
+    if(!canAccess('menu')) return alert("لا صلاحية");
+    const list = state.recipes[pid]||[];
+    let text = list.map(r=>`${r.ingId}:${r.qty}`).join(","); // "1:9,3:30"
+    const help = "\nFormat: ingId:qty,ingId:qty ...\nمثال: 1:9,3:30";
+    const val = prompt("الوصفة (معرّف المادة:الكمية)"+help, text);
+    if(val===null) return;
+    const arr = val.split(",").map(s=>s.trim()).filter(Boolean).map(x=>{
+      const [id,qty]=x.split(":").map(y=>y.trim());
+      return {ingId:parseInt(id,10), qty:parseFloat(qty)};
+    }).filter(x=>x.ingId && !isNaN(x.qty) && x.qty>0);
+    state.recipes[pid]=arr; save(); renderProducts(); log("recipe.update", `product=${pid}`);
+  }
+
+  // Ingredients CRUD + CSV import
+  function refreshIngredientsTable(){
+    const body=$("#ingBody");
+    body.innerHTML = Object.entries(state.ingredients).map(([id,ing])=>`
+      <tr>
+        <td>${ing.name}</td><td>${ing.unit}</td>
+        <td><input type="number" class="input" style="width:120px" value="${ing.qty}" min="0" step="0.01" onchange="setIng(${id},this.value,'qty')"></td>
+        <td><input type="number" class="input" style="width:120px" value="${ing.low}" min="0" step="0.01" onchange="setIng(${id},this.value,'low')"></td>
+        <td class="actions">
+          <button class="btn secondary" onclick="renameIng(${id})">${t('edit')}</button>
+          <button class="btn danger" onclick="delIng(${id})">${t('delete')}</button>
+        </td>
+      </tr>`).join("");
+  }
+  function onAddIngredient(e){
+    e.preventDefault(); if(!canAccess('stock')) return alert("لا صلاحية");
+    const name=$("#ingName").value.trim(); const unit=$("#ingUnit").value.trim()||""; const qty=parseFloat($("#ingQty").value)||0; const low=parseFloat($("#ingLow").value)||0;
+    if(!name) return;
+    const newId = Object.keys(state.ingredients).reduce((m,k)=>Math.max(m,parseInt(k,10)),0)+1;
+    state.ingredients[newId]={name,unit,qty,low}; save(); log("ingredient.add", name);
+    $("#ingForm").reset(); refreshIngredientsTable(); updateKPIs();
+  }
+  window.setIng = function(id,val,key){
+    if(!canAccess('stock')) return alert("لا صلاحية");
+    const v=Math.max(0, parseFloat(val)||0); state.ingredients[id][key]=v; save(); updateKPIs(); log("ingredient.update", `${id}.${key}=${v}`);
+  }
+  window.renameIng = function(id){
+    if(!canAccess('stock')) return alert("لا صلاحية");
+    const curr = state.ingredients[id]; const nv = prompt("اسم المادة:", curr.name); if(nv && nv.trim()){ curr.name=nv.trim(); save(); refreshIngredientsTable(); log("ingredient.rename", `${id}->${nv}`); }
+  }
+  window.delIng = function(id){
+    if(!canAccess('stock')) return alert("لا صلاحية");
+    for(const [pid,arr] of Object.entries(state.recipes)){ if((arr||[]).some(r=>r.ingId==id)) return alert("مادة مستخدمة في وصفات، احذفها من الوصفات أولًا"); }
+    delete state.ingredients[id]; save(); refreshIngredientsTable(); updateKPIs(); log("ingredient.delete", `id=${id}`);
+  }
+  function onImportIngredientsCSV(e){
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const lines = ev.target.result.split(/\r?\n/).filter(l=>l.trim());
+      lines.shift(); // header
+      lines.forEach(line=>{
+        const [id,name,unit,qty,low] = line.split(",");
+        if(id && name){
+          state.ingredients[parseInt(id,10)] = { name: name.trim(), unit: (unit||"").trim(), qty: parseFloat(qty)||0, low: parseFloat(low)||0 };
+        }
+      });
+      save(); refreshIngredientsTable(); updateKPIs(); log("import.ingredients", file.name); alert(t('imported'));
+    };
+    reader.readAsText(file);
+  }
+  function onImportRecipesCSV(e){
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const lines = ev.target.result.split(/\r?\n/).filter(l=>l.trim());
+      lines.shift(); // header
+      const recipes = {};
+      lines.forEach(line=>{
+        const [pid,iid,qty] = line.split(",");
+        if(pid && iid){
+          const p = parseInt(pid,10), i = parseInt(iid,10), q = parseFloat(qty)||0;
+          if(!recipes[p]) recipes[p]=[];
+          recipes[p].push({ingId:i, qty:q});
+        }
+      });
+      state.recipes = {...state.recipes, ...recipes};
+      save(); renderProducts(); log("import.recipes", file.name); alert(t('imported'));
+    };
+    reader.readAsText(file);
+  }
+
+  // Staff with username/password creation
+  function refreshStaffTable(){
+    const body=$("#staffBody");
+    body.innerHTML = state.users.map(u=>`
+      <tr><td>${u.name||u.username}</td><td>${u.username}</td><td>${t(u.role)}</td>
+      <td class="actions">${u.username==='admin'?'':`<button class="btn danger" onclick="removeUser(${u.id})">${t('delete')}</button>`}</td></tr>
+    `).join("");
+  }
+  function onAddStaff(e){
+    e.preventDefault();
+    if(auth.user?.role!=="owner") return alert("صلاحية المالك فقط");
+    const name=$("#staffName").value.trim();
+    const username=$("#staffUsername").value.trim();
+    const password=$("#staffPassword").value;
+    const role=$("#staffRole").value;
+    if(!name || !username || !password) return;
+    if(state.users.some(u=>u.username===username)) return alert("اسم المستخدم مستعمل");
+    const id=(state.users.reduce((m,x)=>Math.max(m,x.id),0)||0)+1;
+    state.users.push({id,username,password,role,name});
+    state.staff.push({id,name,role,username});
+    save(); $("#staffForm").reset(); refreshStaffTable(); log("user.add", `${username}/${role}`); alert(t('added'));
+  }
+  window.removeUser = function(id){
+    if(auth.user?.role!=="owner") return alert("صلاحية المالك فقط");
+    const user = state.users.find(u=>u.id===id);
+    if(user?.username==="admin") return alert("لا يمكن حذف المالك الافتراضي");
+    state.users = state.users.filter(u=>u.id!==id);
+    state.staff = state.staff.filter(s=>s.id!==id);
+    save(); refreshStaffTable(); log("user.delete", `id=${id}`); alert(t('deleted'));
+  }
+
+  // Audit
+  function renderAudit(){
+    const body=$("#auditBody");
+    body.innerHTML = state.audit.slice().reverse().map(a=>
+      `<tr><td>${new Date(a.time).toLocaleString()}</td><td>${a.user}</td><td>${t(a.role)}</td><td>${a.action}</td><td>${a.details||""}</td></tr>`
+    ).join("");
+  }
+
+  // Charts
+  let charts={sales:null,weekly:null,monthly:null};
+  function initCharts(){
+    const brand = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim();
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    charts.sales = new Chart($("#salesChart"), { type:"line",
+      data:{labels:[],datasets:[{label:t('chartToday'),data:[],borderColor:brand,backgroundColor:"transparent",tension:.3}]},
+      options:{plugins:{legend:{labels:{color:getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()}}},scales:{x:{ticks:{color:"currentColor"}},y:{ticks:{color:"currentColor"}}}}
+    });
+    charts.weekly = new Chart($("#weeklyChart"), { type:"bar",
+      data:{labels:[],datasets:[{label:t('chartWeek'),data:[],backgroundColor:brand}]},
+      options:{plugins:{legend:{labels:{color:getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()}}},scales:{x:{ticks:{color:"currentColor"}},y:{ticks:{color:"currentColor"}}}}
+    });
+    charts.monthly = new Chart($("#monthlyChart"), { type:"line",
+      data:{labels:[],datasets:[{label:t('chartMonth'),data:[],borderColor:accent,backgroundColor:"transparent",tension:.3}]},
+      options:{plugins:{legend:{labels:{color:getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()}}},scales:{x:{ticks:{color:"currentColor"}},y:{ticks:{color:"currentColor"}}}}
+    });
+    updateCharts();
+  }
+  function updateChartsLabels(){
+    if(!charts.sales) return;
+    charts.sales.data.datasets[0].label=t('chartToday');
+    charts.weekly.data.datasets[0].label=t('chartWeek');
+    charts.monthly.data.datasets[0].label=t('chartMonth');
+    charts.sales.update(); charts.weekly.update(); charts.monthly.update();
+  }
+  function updateCharts(){
+    if(!charts.sales) return;
+    const hours=Array.from({length:13},(_,i)=>i+8); const todayData=hours.map(()=>0);
+    const today=new Date().toDateString();
+    state.sales.filter(s=> new Date(s.time).toDateString()===today).forEach(s=>{
+      const h=new Date(s.time).getHours(); const idx=hours.indexOf(h); if(idx>=0) todayData[idx]+=s.total;
+    });
+    charts.sales.data.labels=hours.map(h=>`${h}:00`); charts.sales.data.datasets[0].data=todayData; charts.sales.update();
+    const dAR=["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+    const dFR=["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"]; const dEN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const labels=lang==="fr"?dFR:(lang==="en"?dEN:dAR); const week=Array(7).fill(0);
+    state.sales.forEach(s=>{ week[new Date(s.time).getDay()]+=s.total; });
+    charts.weekly.data.labels=labels; charts.weekly.data.datasets[0].data=week; charts.weekly.update();
+    const now=new Date(); const dim=new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const ml=Array.from({length:dim},(_,i)=>i+1); const md=Array(dim).fill(0);
+    state.sales.forEach(s=>{ const d=new Date(s.time); if(d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth()){ md[d.getDate()-1]+=s.total; }});
+    charts.monthly.data.labels=ml; charts.monthly.data.datasets[0].data=md; charts.monthly.update();
+  }
+  function ensureCharts(){ if(!charts.sales) initCharts(); }
+</script>
+</body>
+</html>
